@@ -1,0 +1,34 @@
+This tool generates a physical address trace of the target application.
+
+[How to use]
+Step 1. Install Valgrind
+	Go to valgrind/ dir and follow the install manual in the README.
+
+Step 2. Install kernel in your system
+	Go to kernel/ dir and run install.sh to install kernel build files.
+
+Step 3. Run target application with our script to generate raw trace file.
+	You can use run_script.sh in the run_script/ dir.
+	When you run run_script.sh with the target executable file as an input, 
+	the script will run Valgrind to generate after-cache virtual trace 
+	and send the target pid to the kernel to generate Virtual-Phyiscal mapping.
+	Detailed manual is in the README in run_script/.
+
+	Now, you can run only one target program at once.
+
+Step 4. Create the physical address trace from raw trace files
+	Use make_physical_trace.py in after_run/ dir.
+	After step 3, you can get raw trace file, [.out].
+	In step 4, you can get the physical trace file [.phyout] by using the python code.
+	Detailed manual is in the README in after_run/.
+
+
+	After step 4, you will get [.phyout] file as a final output.
+		Format: [Read/Write] [Physical Address]
+		Example:
+			...
+			R 0x1234
+			W 0x2345
+			...
+
+	You can plot some graphs with trace files by using after_run/graph/*.py

@@ -1,0 +1,6 @@
+make_physical_trace.py
+	usage: python3 make_physical_trace.py [trace.out]
+	output: trace.phyout
+
+	the [.out] trace file has two information. One is a virtual address trace, and the other is Virtual-Phyiscal mappings.
+	This code combines two information and generates a physical address trace. 
