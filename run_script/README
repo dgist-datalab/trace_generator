@@ -1,0 +1,13 @@
+Use run_script.sh to generate virtual trace file with target executable program.
+
+[How to use]
+	./run_script.sh --input [executable]
+		Run [executable] with generating after-cache virtual address trace.
+	./run_script.sh --input [executable] --pref
+		Run [executable] with generating after-cache virtual address trace with cpu prefetcher in the valgrind cache simulator. 
+		To generate more accurate trace, recommend use --pref option.
+		
+	Output:
+		[cg_result.out] file: Virtual address trace + Virtual-Physical mapping information
+		[proclog.log] file: Redirection of process standard output
+		[callgrind.out.#]: Output from vanilla Valgrind (We don't use)
