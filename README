@@ -18,7 +18,7 @@ Step 3. Run target application with our script to generate raw trace file.
 	and send the target pid to the kernel to generate Virtual-Phyiscal mapping.
 	Detailed manual is in the README in run_script/.
 
-	Now, you can run only one target program at once.
+	In the current version, you can run only one target program at once.
 
 Step 4. Create the physical address trace from raw trace files
 	Use make_physical_trace.py in after_run/ dir.
