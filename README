@@ -3,6 +3,10 @@ This tool generates a physical address trace of the target application.
 [How to use]
 Step 1. Install Valgrind
 	Go to valgrind/ dir and follow the install manual in the README.
+	** Note **
+		In the latest commit, Valgrind prints out timestamps of boot time for each trace line.
+		If you don't want, comment out ./valgrind/callgrind/sim.c:153.
+			//#define TRACE_TIMESTAMP
 
 Step 2. Install kernel in your system
 	Go to kernel/ dir and run install.sh to install kernel build files.
@@ -18,6 +22,8 @@ Step 3. Run target application with our script to generate raw trace file.
 
 Step 4. Create the physical address trace from raw trace files
 	Use make_physical_trace.py in after_run/ dir.
+	(If the trace file contains timestamps, use make_physical_trace_ts.py.)
+
 	After step 3, you can get raw trace file, [.out].
 	In step 4, you can get the physical trace file [.phyout] by using the python code.
 	Detailed manual is in the README in after_run/.
