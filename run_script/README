@@ -2,20 +2,25 @@ Use run_script.sh to start memory tracing. It generates virtual trace file with 
 It is a very simple script, so you can modify this script as you want.
 
 You can modify this script as you want.
-Line 37 and 41 is necessary. 
-Line 37 runs valgrind to generate virtual memory address trace to the [.out] file through stderr.
-and line 41 sends the pid of target process to the kernel.
-Upon receiving the target pid, the kernel outputs the VPN-PFN mapping information of the faulting address to the stderr of the corresponding pid.
-Therefore, [.out] file contains two different information (virtual address trace + VPN-PFN mapping information)
+Line 58 and 63 is necessary. 
+Line 58 runs valgrind to generate virtual memory address trace to the [.vout] file through stderr.
+and line 63 sends the pid of target process to the kernel.
+Upon receiving the target pid, the kernel outputs the VPN-PFN mapping information of the faulting address to the /proc/vpmap/vpmap.
 
 [How to use]
-	./run_script.sh --input [executable]
+	./run_script.sh --input [executable] --type [virtual/physical]
 		Run [executable] with generating after-cache virtual address trace.
-	./run_script.sh --input [executable] --pref
+		virtual type: generate virtual address trace only.
+		phyiscal type: generate virtual address trace & V2P mapping, and create physical address trace by mixing them.
+
+	./run_script.sh --input [executable] --type [virtual/physical] --pref
 		Run [executable] with generating after-cache virtual address trace with cpu prefetcher in the valgrind cache simulator. 
-		To generate more accurate trace, recommend use --pref option.
+		To generate more accurate trace, recommend to use --pref option.
 		
 	Output:
-		[cg_result.out] file: Virtual address trace + Virtual-Physical mapping information
+		[trace_pref{ON/OFF}.vout] file: Virtual address trace 
+		[trace_pref{ON/OFF}.vpmap] file: V2P mapping information
+		[trace_pref{ON/OFF}.mix] file: mixure of [.vout] and [.vpmap] following timestamps order
+		[trace_pref{ON/OFF}.pout] file: Physical address trace
 		[proclog.log] file: Redirection of process standard output
 		[callgrind.out.#]: Output from vanilla Valgrind (We don't use)

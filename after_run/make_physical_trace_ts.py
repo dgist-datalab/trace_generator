@@ -1,4 +1,4 @@
-# If [.out] trace file has timestamp, use this script.
+# If [.vout] trace file has timestamp, use this script.
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
@@ -44,8 +44,8 @@ input_file_name = sys.argv[1]
 linenum = file_len(input_file_name)
 print("linenum of %s: %d" % (input_file_name, linenum))
 
-if input_file_name[-4:] != ".out":
-    print("input file [%s] is not .out!" % (input_file_name))
+if input_file_name[-4:] != ".mix":
+    print("input file [%s] is not .mix!" % (input_file_name))
     exit()
 
 raw_trace_file = open(input_file_name, 'r')
@@ -103,7 +103,7 @@ while True:
 
 
 # Second scan to translate Valgrind's virtual memory trace to the physical memory trace
-output_file_name = input_file_name[:-4] + ".phyout"
+output_file_name = input_file_name[:-4] + ".pout"
 mem_trace = open(output_file_name, 'w')
 raw_trace_file.seek(0)
 

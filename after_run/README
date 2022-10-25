@@ -1,18 +1,18 @@
 make_physical_trace.py
-	usage: python3 make_physical_trace.py [trace.out]
+	usage: python3 make_physical_trace.py [trace.mix]
 	output: trace.phyout
 
-	the [.out] trace file has two information. One is a virtual address trace, and the other is Virtual-Phyiscal mappings.
+	the [.mix] trace file has two information. One is a virtual address trace, and the other is Virtual-Phyiscal mappings.
 	This code combines two information and generates a physical address trace. 
 
-	The first line of [.phyout] file:
+	The first line of [.pout] file:
 		ok_cnt  none_cnt  ok/total
 
 make_physical_trace_ts.py
-	usage: python3 make_physical_trace_ts.py [trace.out]
+	usage: python3 make_physical_trace_ts.py [trace.mix]
 	output: trace.phyout
 
-	This script is the same as the one above, but is used when the [.out] trace file contains timestamps.
+	This script is the same as the one above, but is used when the [.mix] trace file contains timestamps.
 	Only line 160 is different.
 
 	In the current version, the scripts for graphs (e.g., ./figures/*.py) don't support an input file including timestamps.

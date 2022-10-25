@@ -18,7 +18,7 @@ def read_va_log(input_file_name, args, data_read = 0):
         log_ext = ".clog"
     else:
         log_ext = ".blog" 
-    va_log_file_name = input_file_name[:-7] + log_ext
+    va_log_file_name = input_file_name[:-5] + log_ext
     va_log_file = open(va_log_file_name, 'r')
     splitline = va_log_file.readline().split(" ")
     va_min = int(splitline[0], 16)
@@ -56,7 +56,7 @@ else:
 
 input_file_name = args.input
 #input_file_name = sys.argv[1]
-if input_file_name[-7:] != ".phyout":
+if input_file_name[-5:] != ".pout":
     print("input file [%s] is not .phyout!" % (input_file_name))
     exit()
 
@@ -83,7 +83,8 @@ while True:
         print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="") 
         
     line = line.replace('R ', '').replace('W ', '').replace('\n',' ')
-    a = int(line, 16)    
+    splitline = line.split(" ")
+    a = int(splitline[0], 16)    
         
     if a > max:
         if a < upper_bound: # Upper bound of interesting address
@@ -122,7 +123,7 @@ else:
 # File open, and make histogram (# of access per address group)
 file.seek(0)
 
-man = 1 # manual size of axis
+man = 0 # manual size of axis
 man_range = 10000
 if scatter:
     scope = max-min
@@ -147,7 +148,7 @@ if scatter:
             W_cnt += 1
 
         line = line.replace('R ', '').replace('W ', '').replace('\n',' ')
-        a = int(line, 16)
+        a = int(splitline[0], 16)
         if a >= upper_bound or a <= lower_bound:
             i += 1
             continue
@@ -206,9 +207,9 @@ if scatter:
     print("plot end. save..")
     id_str = "-scatter"+str(args.scatter)+"-g"+str(group_num)+"-"+str(group_size)
     if man == 0:
-        fig_name = "./figures/plot" + id_str + "_" + input_file_name[:-7] + "_pa.png"
+        fig_name = "./plot" + id_str + "_" + input_file_name[:-5] + "_pa.png"
     else:
-        fig_name = "./figures/manplot" + id_str + "_" + input_file_name[:-7] + "_pa.png"
+        fig_name = "./manplot" + id_str + "_" + input_file_name[:-5] + "_pa.png"
     fig.savefig(fig_name, bbox_inches='tight', format='png')
 
 else:
@@ -260,6 +261,10 @@ else:
             hotgroup_sum += y
     print("va_hotgroup_cnt: %d, hotgroup_cnt: %d" % (va_hotgroup_cnt, hotgroup_cnt))
     print("va_hotgroup_sum: %d, hotgroup_sum: %d" % (va_hotgroup_sum, hotgroup_sum))
+    # group size가 어쨌든 4K pagesize보다는 크므로, 
+    # MMU가 VPN을 page 단위로 퍼뜨린다고 가정하면 더 퍼뜨리는 것처럼 보일 수 있다.
+    # 이것까지 제대로 보려면, 애초에 VA hist에서 group size를 group_num=10000이 아니라 
+    # group_size=4000으로 해야 한다.
 
     # Sort and cdf
     from itertools import accumulate
@@ -329,8 +334,7 @@ else:
 
     print("plot end. save..")
     if man == 0:
-        fig_name = "./figures/hist" + id_str + "_" + input_file_name[:-7] + "_pa.png"
+        fig_name = "./hist" + id_str + "_" + input_file_name[:-5] + "_pa.png"
     else:
-        fig_name = "./figures/manhist" + id_str + "_" + input_file_name[:-7] + "_pa.png"
+        fig_name = "./manhist" + id_str + "_" + input_file_name[:-5] + "_pa.png"
     fig.savefig(fig_name, bbox_inches='tight', format='png')
-    #plt.show()

@@ -40,8 +40,8 @@ else:
         print("plot basic address histogram")
 
 input_file_name = args.input
-if input_file_name[-4:] != ".out":
-    print("input file [%s] is not .out!" % (input_file_name))
+if input_file_name[-5:] != ".vout":
+    print("input file [%s] is not .vout!" % (input_file_name))
     exit()
 
 linenum = file_len(input_file_name)
@@ -170,10 +170,10 @@ if scatter:
     ax1.set_ylabel(ylabel_name)
     ax1.tick_params(axis='y', direction='in')
     ax1.set_ylim(0, group_num)
-    id_str = "-scatter-g"+str(group_num)+"-"+str(group_size)
-    fig_name = "./figures/plot" + id_str + "_" + input_file_name[:-4] + "_va.png"
+    id_str = "-scatter"+str(args.scatter)+"-g"+str(group_num)+"-"+str(group_size)
+    fig_name = "./plot" + id_str + "_" + input_file_name[:-5] + "_va.png"
     fig.savefig(fig_name, bbox_inches='tight', format='png')
-    log_file_name = input_file_name[:-4] + ".slog"
+    log_file_name = input_file_name[:-5] + ".slog"
     save_log(log_file_name, min, max, lower_bound, upper_bound, group_num, data=scatter)
 
 
@@ -260,12 +260,12 @@ else:
         id_str = "-g"+str(group_num)+"-"+str(group_size)
     ax1.tick_params(axis='y', direction='in')
 
-    fig_name = "./figures/hist" + id_str + "_" + input_file_name[:-4] + "_va.png"
+    fig_name = "./hist" + id_str + "_" + input_file_name[:-5] + "_va.png"
     fig.savefig(fig_name, bbox_inches='tight', format='png')
 
     # Save min/max in a log file for calculating the address pool size
     if cdf == 1:
-        log_file_name = input_file_name[:-4] + ".clog"
+        log_file_name = input_file_name[:-5] + ".clog"
     else:
-        log_file_name = input_file_name[:-4] + ".blog"
+        log_file_name = input_file_name[:-5] + ".blog"
     save_log(log_file_name, min, max, lower_bound, upper_bound, group_num, data=hist)

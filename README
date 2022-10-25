@@ -10,6 +10,7 @@ Step 1. Install Valgrind
 
 Step 2. Install kernel in your system
 	Go to kernel/ dir and run install.sh to install kernel build files.
+	If you don't need physical trace, then skip Step 2.
 
 Step 3. Run target application with our script to generate raw trace file.
 	You can use run_script.sh in the run_script/ dir.
@@ -18,18 +19,16 @@ Step 3. Run target application with our script to generate raw trace file.
 	and send the target pid to the kernel to generate Virtual-Phyiscal mapping.
 	Detailed manual is in the README in run_script/.
 
-	In the current version, you can run only one target program at once.
+	In the current version, you can run only one target program at once for physical trace.
 
 Step 4. Create the physical address trace from raw trace files
-	Use make_physical_trace.py in after_run/ dir.
-	(If the trace file contains timestamps, use make_physical_trace_ts.py.)
+	run_script.sh in Step 3 includes this Step 4.
 
-	After step 3, you can get raw trace file, [.out].
-	In step 4, you can get the physical trace file [.phyout] by using the python code.
+	After step 3, you can get raw trace file, [.vout].
+	In step 4, you can get the physical trace file [.pout] by using the python script.
 	Detailed manual is in the README in after_run/.
 
-
-	After step 4, you will get [.phyout] file as a final output.
+	After step 4, you will get [.pout] file as a final output.
 		Format: [Read/Write] [Physical Address]
 		Example:
 			...
@@ -37,4 +36,4 @@ Step 4. Create the physical address trace from raw trace files
 			W 0x2345
 			...
 
-	You can plot some graphs with trace files by using after_run/graph/*.py
+	(Unsupported) You can plot some graphs with trace files by using after_run/graph/*.py

@@ -32,4 +32,4 @@ fi
 
 $cmd
 
-echo "kernel install end."
+echo "kernel install end. please reboot"
