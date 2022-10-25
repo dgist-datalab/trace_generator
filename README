@@ -1,4 +1,4 @@
-This tool generates a physical address trace of the target application.
+This tool generates a virtual/physical address trace of the target application.
 
 [How to use]
 Step 1. Install Valgrind
@@ -36,4 +36,4 @@ Step 4. Create the physical address trace from raw trace files
 			W 0x2345
 			...
 
-	(Unsupported) You can plot some graphs with trace files by using after_run/graph/*.py
+	You can plot some graphs with trace files by using after_run/graph/*.py

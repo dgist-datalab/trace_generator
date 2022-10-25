@@ -15,4 +15,8 @@ make_physical_trace_ts.py
 	This script is the same as the one above, but is used when the [.mix] trace file contains timestamps.
 	Only line 160 is different.
 
-	In the current version, the scripts for graphs (e.g., ./figures/*.py) don't support an input file including timestamps.
+mix_vpmap.py
+	usage: python3 mix_vpmap.py [trace.vout]
+	output: trace.mix
+
+	This script makes [.mix] trace file by combining [trace.vout] and [trace.vpmap]

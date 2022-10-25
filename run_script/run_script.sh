@@ -81,7 +81,7 @@ wait $target_pid
 end_time=`date +%s`
 
 runtime=$((end_time-start_time))
-echo "runtime: $runtime"
+echo "runtime: $runtime (sec)"
 
 cat /proc/vpmap/vpmap > ./$logfile.vpmap
 echo 0 > /sys/module/memory/parameters/target_pid

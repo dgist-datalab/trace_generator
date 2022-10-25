@@ -1,5 +1,6 @@
 Use run_script.sh to start memory tracing. It generates virtual trace file with target executable program.
 It is a very simple script, so you can modify this script as you want.
+You can test the physical trace feature works well by running check.sh
 
 You can modify this script as you want.
 Line 58 and 63 is necessary. 
@@ -23,4 +24,4 @@ Upon receiving the target pid, the kernel outputs the VPN-PFN mapping informatio
 		[trace_pref{ON/OFF}.mix] file: mixure of [.vout] and [.vpmap] following timestamps order
 		[trace_pref{ON/OFF}.pout] file: Physical address trace
 		[proclog.log] file: Redirection of process standard output
-		[callgrind.out.#]: Output from vanilla Valgrind (We don't use)
+		[callgrind.out.#]: Output from vanilla Valgrind (We don't use. It's OK to remove these files)

@@ -1,25 +1,24 @@
 Plot graphs with generated trace.
-Graphs are saved in ./figures/ directory. 
 
 cg_histogram.py
-	Input: [.out] trace file from Step 3
+	Input: [.vout] trace file from Step 3
 	Output: [.eps] graph and log files
 
 	python3 cg_histogram.py -i [trace.out] 	
 		plot graph (VA - # of accesses)
 	python3 cg_histogram.py -i [trace.out] --cdf
 		plot sorted cdf graph (VA - # of accesses)
-	python3 cg_histogram.py -i [trace.out] --scatter
+	python3 cg_histogram.py -i [trace.out] --scatter [sampling unit]
 		plot graph (elapsed time - VA)
 
 
 cg_pa_histogram.py
-	Input: [.phyout] trace file from Step 4 and log files. You need to run cg_historam.py first to create log files.
+	Input: [.pout] trace file from Step 4 and log files. You need to run cg_historam.py first to create log files.
 	Output: [.eps] graph files.
 
 	python3 cg_pa_histogram.py -i [trace.phyout] 	
 		plot graph (PA - # of accesses)
 	python3 cg_pa_histogram.py -i [trace.phyout] --cdf
 		plot sorted cdf graph (PA - # of accesses)
-	python3 cg_pa_histogram.py -i [trace.phyout] --scatter
+	python3 cg_pa_histogram.py -i [trace.phyout] --scatter [sampling unit]
 		plot graph (elapsed time - PA)
