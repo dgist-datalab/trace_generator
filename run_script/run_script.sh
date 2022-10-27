@@ -93,6 +93,9 @@ if [ "$TRACE_TYPE" == "physical" ]; then
 	echo "Make physical trace using virtual trace and V2P mapping.."
 	python3 ../after_run/mix_vpmap.py ./$logfile.vout
 	python3 ../after_run/make_physical_trace_ts.py ./$logfile.mix
+	nline_vout=$(wc -l ./$logfile.vout | awk '{print $1}')
+	nline_pout=$(wc -l ./$logfile.pout | awk '{print $1}')
+	echo "# of lines ([.vout] / [.pout]): $nline_vout / $nline_pout"
 fi
 
 read -r -p "Do you want to plot graph? [y/N] " response
