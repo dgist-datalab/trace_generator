@@ -41,7 +41,11 @@ vpmap_end = 0
 while True:
     line = raw_trace_file.readline()
     if not line: break
-    if line[0] == "=": break
+    if line[0] != "[": 
+#print("[%d] %s" % (i, line), end="")
+        i += 1
+        continue
+#if line[0] == "=": break
     if (i % (linenum//1000)) == 0:
         print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="") 
     sline = line.replace(']', '').replace('\n', '')
