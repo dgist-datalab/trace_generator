@@ -9,12 +9,14 @@ and line 63 sends the pid of target process to the kernel.
 Upon receiving the target pid, the kernel outputs the VPN-PFN mapping information of the faulting address to the /proc/vpmap/vpmap.
 
 [How to use]
-	./run_script.sh --input [executable] --type [virtual/physical]
+	./run_script.sh --type [virtual/physical] --input [executable args..]
+		NOTE: --input [] must be placed at the end of option
 		Run [executable] with generating after-cache virtual address trace.
 		virtual type: generate virtual address trace only.
 		phyiscal type: generate virtual address trace & V2P mapping, and create physical address trace by mixing them.
 
-	./run_script.sh --input [executable] --type [virtual/physical] --pref
+	./run_script.sh --type [virtual/physical] --pref --input [executable args..]
+		NOTE: --input [] must be placed at the end of option
 		Run [executable] with generating after-cache virtual address trace with cpu prefetcher in the valgrind cache simulator. 
 		To generate more accurate trace, recommend to use --pref option.
 		
