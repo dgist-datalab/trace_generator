@@ -10,7 +10,8 @@ echo 1 > /proc/sys/vm/compact_memory
 # command
 arguments=$@
 . ./getopt.sh $arguments
-if [ -z $INPUT_FILE ] || [ -z $TRACE_TYPE ]; then
+#if [ -z $INPUT_FILE ] || [ -z $TRACE_TYPE ]; then
+if [ $INPUT_FILE_YES -ne 1 ] || [ -z $TRACE_TYPE ]; then
     echo "No input or trace type!"
     echo "    Args Example: -i/--input [\$INPUT_PROGRAM] -t/--type [virtual/physical]"   
     exit
