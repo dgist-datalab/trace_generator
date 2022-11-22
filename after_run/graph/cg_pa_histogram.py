@@ -148,6 +148,7 @@ if scatter:
             W_cnt += 1
 
         line = line.replace('R ', '').replace('W ', '').replace('\n',' ')
+        splitline = line.split(" ")
         a = int(splitline[0], 16)
         if a >= upper_bound or a <= lower_bound:
             i += 1
