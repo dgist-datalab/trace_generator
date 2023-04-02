@@ -1,0 +1,447 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import sys
+from collections import namedtuple
+
+# valgrind에 function begin-end 시 print하는 코드를 추가해 놓았을 때,
+# 그 정보를 .vout에서 읽어서 구분하는 스크립트
+# func_trace.py 
+# input: [.vout] file
+# output: stdout 
+
+LINE_FUNC_BEGIN=0
+LINE_FUNC_END=1
+LINE_MALLOC_CALL=2
+LINE_FREE_CALL=3
+LINE_IGNORE=4
+LINE_RW=5
+
+# Initialize global sequence types & variables
+func_dict = {}
+opened_funcs = []
+malloc_dict = {}
+opened_mallocs = {}
+malloc_id = 0
+func_id = 0
+popf_dict = {} # nested dict, {key: malloc_id, value: {key: func_name, value: rw_entry}}
+total_rcnt = 0 # # of total read
+total_wcnt = 0 # # of total write
+total_obj_rcnt = 0 # # of total read to objects
+total_obj_wcnt = 0 # # of total write to objects
+obj_stats = []
+
+#class StatPopf:
+    #def __init__(r_rate, w_rate, 
+
+def file_len(fname):
+    with open(fname) as f:
+        for i, l in enumerate(f):
+            pass
+    return i + 1
+
+class FuncAccess:
+    def __init__(self, fcall_cnt, line_group):
+        self.fcall_cnt = fcall_cnt
+        self.line_group = line_group
+
+class RWEntry:
+    def __init__(self, rw_type, rw_addr, rw_timestamp, func_name=None, obj_id=-1, func_id=-1):
+        self.obj_id = obj_id
+        self.rw_type = rw_type
+        self.rw_addr = rw_addr
+        self.rw_timestamp = rw_timestamp
+        self.func_name = func_name
+        self.func_id = func_id
+        
+class MemEntry:
+    def __init__(self, malloc_id, msize, maddr, line_group, rcnt, wcnt):
+        self.malloc_id = malloc_id
+        self.msize = msize
+        self.maddr = maddr
+        self.line_group = line_group
+        self.rcnt = rcnt
+        self.wcnt = wcnt
+
+# 공통된 Access list를 하나 만들어두고
+# 여러 dict가 다른 방식으로 그것을 가리키게?
+# Access list 하나로 되는지?
+# func_dict에는 line을 거의 그대로 넣었는데, 
+# 거기에는 obj_id, func_id가 없다. 
+# func_id는 없어도 괜찮다고 쳐도, obj_id는 좀 다른데. default=-1로?
+
+# Statistics
+# 전체 RW 중 Obj, 모든 Obj 중 Obj, Obj의 함수별 비율 등.. 비율이 너무 많다.
+
+def calculate_rate(cnt, total):
+    if total == 0:
+        rate = float("nan")
+    else:
+        rate = cnt/total * 100
+    return rate
+
+def make_rwcnt_popf(mentry, rw_list, fname):
+    rcnt_popf = 0; wcnt_popf = 0
+    for rw_entry in rw_list:
+        if rw_entry.rw_type == "R":
+            rcnt_popf += 1
+        elif rw_entry.rw_type == "W":
+            wcnt_popf += 1
+        else:
+            print("error"); exit()
+    return rcnt_popf, wcnt_popf
+
+def make_stat_popf(mentry, rw_list, fname):
+    rcnt_popf = 0; wcnt_popf = 0
+    for rw_entry in rw_list:
+        if rw_entry.rw_type == "R":
+            rcnt_popf += 1
+        elif rw_entry.rw_type == "W":
+            wcnt_popf += 1
+        else:
+            print("error"); exit()
+
+    r_rate = calculate_rate(rcnt_popf, mentry.rcnt) # read ratio of the function in the object (popf)
+    w_rate = calculate_rate(wcnt_popf, mentry.wcnt)
+    rw_rate = (rcnt_popf+wcnt_popf) / (mentry.rcnt+mentry.wcnt)
+    print("(obj %d - func %s) R: %d/%d (%.2f%%), W: %d/%d (%.2f%%)" 
+            % (mentry.malloc_id, fname, rcnt_popf, mentry.rcnt, r_rate, 
+            wcnt_popf, mentry.wcnt, w_rate))
+    return r_rate, w_rate, rw_rate
+
+"""
+def make_stat_popf(rcnt_po, wcnt_po, ac_list): # statistics of 'per-object-per-function'
+    rcnt_popf = 0; wcnt_popf = 0;
+    for line in ac_list:
+        rwtype = line[1]
+        if rwtype == "R":
+            rcnt_popf += 1
+        elif rwtype == "W":
+            wcnt_popf += 1
+        else:
+            print("error"); exit()
+    read_ratio = rcnt_popf / rcnt_po # read ratio of the function in the object (popf)
+    write_ratio = wcnt_popf / wcnt_po
+
+    #print("(obj %d - func %s) R: %d (%.2f), W: %d (%.2f)", ac_list[0])
+"""
+
+def analyze_func(func_dict):
+    records = []
+    jump_hist = []
+    for key, v in func_dict.items():
+        value = v.line_group
+        for i in range(0, len(value)):
+            prev_addr = 0x00
+            cnt1 = 0; cnt2 = 0; cnt3 = 0; cnt4 = 0; cnt = 0
+            min_addr = 0xffffffffffffffff; max_addr = 0
+            trace = value[i] # rw trace per each call (begin-end)
+            for rwentry in trace:
+                is_first = 0
+                if (prev_addr == 0x00):
+                    is_first = 1
+                #sline = line.split(" ")
+                #curr_addr = int(sline[1], 16)
+                curr_addr = rwentry.rw_addr
+                dist = curr_addr - prev_addr 
+                prev_addr = curr_addr
+                if min_addr > curr_addr: min_addr = curr_addr
+                if curr_addr > max_addr: max_addr = curr_addr
+                if (is_first): continue
+                if (dist > 0 and dist <= 256): cnt1 += 1
+                if (dist == 0): cnt2 += 1
+                if (dist >= -64): cnt3 += 1
+                if (dist >= -256): cnt4 += 1
+
+                # make dist (jump) distribution
+                jump_hist.append(dist)
+
+                cnt += 1
+            if (cnt > 0):
+                stat1=cnt1/cnt*100.; stat2=cnt2/cnt*100.; stat3=cnt3/cnt*100.; stat4=cnt4/cnt*100.
+                #print("%s [%d]: %d/%d (%.0f%%) %d/%d (%.0f%%) %d/%d (%.0f%%) %d/%d (%.0f%%)" % (key, i, cnt1, cnt, stat1, cnt2, cnt, stat2, cnt3, cnt, stat3, cnt4, cnt, stat4))
+                cnt_list = [cnt, cnt1, cnt2, cnt3, cnt4]
+                minmax_list = [min_addr, max_addr]
+                record = [key,i,cnt,cnt_list, minmax_list]
+                records.append(record)
+
+    records.sort(key=lambda x: -x[2])
+    nRanker = int(len(records) * 0.3)
+    for i in range(nRanker):
+        record = records[i]
+        cnt_list = record[3]
+        minmax_list = record[4]
+        minmax_list[0] = hex(minmax_list[0])
+        minmax_list[1] = hex(minmax_list[1])
+        stat1 = cnt_list[1]/cnt_list[0]*100.
+        if (stat1 >= 50):
+            print("(%.0f%%) " % (stat1), end='')
+            print(record)
+
+    return
+
+def open_input_file(input_file_name):
+    if input_file_name[-5:] != ".vout":
+        print("input file [%s] is not .vout!" % (input_file_name))
+        exit()
+    linenum = file_len(input_file_name)
+    print("linenum of %s: %d" % (input_file_name, linenum))
+
+    try:
+        raw_trace_file = open(input_file_name, 'r')
+    except:
+        sys.stderr.write("No file: %s\n" % input_file_name)
+        exit(1)
+
+    # Skip Callgrind comment
+    for i in range(7):
+        line = raw_trace_file.readline()
+
+    return linenum, raw_trace_file
+
+
+def check_line_type(line):
+    if line[0] == "^":
+        if line[1] == "f": 
+            if line[3] == "b": # function call (begin)
+                line_type = LINE_FUNC_BEGIN
+            elif line[3] == "e": # function end
+                line_type = LINE_FUNC_END
+        elif line[1] == "m":
+            if line[3] == "b": # malloc call
+                line_type = LINE_MALLOC_CALL
+            elif line[3] == "e": # free call
+                line_type = LINE_FREE_CALL
+        else:
+            print("function line protocol error: not f or m")
+            exit()
+    elif line[0] != "[":
+        line_type = LINE_IGNORE
+    else:
+        # Normal CLG R/W trace lines
+        line_type = LINE_RW
+    return line_type
+
+# 지금 func_dict는 func_id로 구분하지 않고, 개별 instance의 begin-end 사이에 해당하는 것만 구분하고 있다.
+def interprete_line(line_type, line):
+    global func_dict, opened_funcs, malloc_dict, opened_mallocs, malloc_id, func_id
+    global total_rcnt, total_wcnt, total_obj_rcnt, total_obj_wcnt
+
+    if line_type == LINE_FUNC_BEGIN:
+        func_name = line[5:].replace("\n", "") 
+        if not func_name in opened_funcs:
+            opened_funcs.append(func_name)
+        if not func_name in func_dict:
+            # func_dict -> dict of {fname:fentry}
+            # fentry: [call cnt within same fname (used as index), lines for first call, lines for second call, ...]
+            func_dict[func_name] = FuncAccess(1, [[]])
+        else: # 동일 func_name이 2번째 호출됐을 때부터
+            # add new empty list for rw requests in dict
+            func_dict[func_name].fcall_cnt += 1
+            func_dict[func_name].line_group.append([])
+        func_id += 1
+
+    elif line_type == LINE_FUNC_END:
+        func_name = line[5:].replace("\n", "") 
+        if func_name in opened_funcs:
+            opened_funcs.remove(func_name)
+        else:
+            if func_name[0] != "(": # e.g., (below main)
+                print(opened_funcs)
+                print("function line error: meet end, but no name in list. name:", func_name)
+
+    elif line_type == LINE_MALLOC_CALL:
+        splitline = line.replace("\n", "").split(" ")
+        maddr = int(splitline[3], 16)
+        msize = int(splitline[2], 10)
+        #malloc_entry = [malloc_id, msize, maddr, []]
+        malloc_entry = MemEntry(malloc_id, msize, maddr, [], 0, 0)
+        malloc_dict[malloc_id] = malloc_entry
+        opened_mallocs[maddr] = malloc_entry
+        malloc_id += 1
+
+    elif line_type == LINE_FREE_CALL:
+        splitline = line.replace("\n", "").split(" ")
+        faddr = int(splitline[2], 16)
+        #print(opened_mallocs)
+        if faddr in opened_mallocs:
+            #print("line:", line)
+            #print("faddr:", faddr)
+            del opened_mallocs[faddr]
+        #else:
+            # Redis에서 안 맞는 게 많다. 안 맞는 것 때문에 opened_malloc이 너무 많아지고, 이러면 obj trace를 제대로 모을 수 없다.
+            #print("line: %s" % (line))
+
+    elif line_type == LINE_IGNORE:
+        ignore_cnt = 0
+    elif line_type == LINE_RW:
+        # 처음 trace의 RW line을 읽는 곳이니 여기서 Access로 만들어 보관해놓으면 될 것 같다.
+        sline = line.replace('[', '').replace(']', '').replace('\n', '').split(" ")
+        rw_type = sline[0]
+        rw_addr = int(sline[1], 16)
+        rw_time = float(sline[2])
+        rw_entry = RWEntry(rw_type=rw_type, rw_addr=rw_addr, rw_timestamp=rw_time) 
+        if rw_type == "R":
+            total_rcnt += 1
+        elif rw_type == "W":
+            total_wcnt += 1
+
+        # 함수 단위의 구분을 위해 필요한 func_dict 채우기
+        # 열린 모든 함수들에게 이 RW를 중복해서 저장해놓기
+        # per-object-per-function에서는 필요 없음
+        for fname in opened_funcs:
+            fcall_idx = func_dict[fname].fcall_cnt - 1
+            #print(fcall_idx)
+            #print(func_dict[fname].line_group)
+            #print(func_dict[fname].line_group[0])
+            func_dict[fname].line_group[fcall_idx].append(rw_entry)
+
+        # 이 RW line이 어떤 obj에 해당하는 건지 검사하여 malloc_dict에 추가
+        # obj에 해당하지 않는 RW였으면 그냥 넘어간다.
+        for maddr, mentry in opened_mallocs.items():
+            # 현재 살아있는 모든 obj들의 주소 범위와 비교
+            # 0개 or 1개일테니 if문에서 break을 거는 게 좋다.
+            if (maddr <= rw_addr) and (rw_addr < maddr+mentry.msize):
+                # True: This RW is RW to Object
+                func_name = opened_funcs[-1]
+                rw_entry.obj_id = mentry.malloc_id
+                rw_entry.func_name = func_name # 이 RW의 caller로서 가장 가까운 함수를 가정
+                malloc_dict[mentry.malloc_id].line_group.append(rw_entry)
+                if rw_entry.rw_type == "R":
+                    total_obj_rcnt += 1
+                elif rw_entry.rw_type == "W":
+                    total_obj_wcnt += 1
+
+                break
+    else:
+        print("line_type error"); exit()
+
+    return
+        
+
+def read_trace_file(linenum, raw_trace_file):
+    while True:
+        line = raw_trace_file.readline()
+        if not line: break
+
+        # decode line 
+        line_type = check_line_type(line)
+        interprete_line(line_type, line)
+
+    return
+
+def analyze_object():
+    global malloc_dict
+    global popf_dict
+
+    PopfStat = namedtuple('PopfStat', ['fname', 'rcnt_popf', 'wcnt_popf'])
+    StatEntry = namedtuple('StatEntry', ['obj_id', 'obj_rcnt', 'obj_wcnt', 'obj_rwcnt', 'popf_stat_list'])
+    num_objs = len(malloc_dict)
+    print("num_objs:", num_objs)
+    i = 0
+    for mid, mentry in malloc_dict.items():
+        if (i % (num_objs//100)) == 0: 
+            print('\r', "%.0f%% [%d/%d]" % (i/num_objs*100, i, num_objs), end='')
+        popf_dict[mid] = {}
+        rcnt_obj=0; wcnt_obj=0;
+
+        for rw_entry in mentry.line_group:
+            if rw_entry.rw_type == "R":
+                rcnt_obj += 1
+            elif rw_entry.rw_type == "W":
+                wcnt_obj += 1
+            else:
+                print("ac_type error!"); exit()
+            fname = rw_entry.func_name
+            if not fname in popf_dict[mid]:
+                popf_dict[mid][fname] = []
+            popf_dict[mid][fname].append(rw_entry)
+
+        # rcnt_obj, wcnt_obj가 계산되었으니, MemEntry에 넣는 게 좋을듯
+        mentry.rcnt = rcnt_obj
+        mentry.wcnt = wcnt_obj
+        #print(mentry.rcnt, mentry.wcnt)
+        """
+        for fname in popf_dict[mid]:
+            r_rate, w_rate, rw_rate = make_stat_popf(mentry, popf_dict[mid][fname], fname)
+        """
+
+        obj_r_rate = calculate_rate(mentry.rcnt, total_obj_rcnt)
+        obj_w_rate = calculate_rate(mentry.wcnt, total_obj_wcnt)
+        """
+        print("(obj %d/TotalObj) R: %d/%d (%.2f%%), W: %d/%d (%.2f%%)"
+                % (mentry.malloc_id, mentry.rcnt, total_obj_rcnt, obj_r_rate,
+                mentry.wcnt, total_obj_wcnt, obj_w_rate))
+        """
+
+        r_rate = calculate_rate(mentry.rcnt, total_rcnt)
+        w_rate = calculate_rate(mentry.wcnt, total_wcnt)
+        """
+        print("(obj %d/TotalRW) R: %d/%d (%.2f%%), W: %d/%d (%.2f%%)"
+                % (mentry.malloc_id, mentry.rcnt, total_rcnt, r_rate,
+                mentry.wcnt, total_wcnt, w_rate))
+        print("")
+        """
+
+        popf_stat_list = []
+        for fname in popf_dict[mid]:
+            rcnt_popf, wcnt_popf = make_rwcnt_popf(mentry, popf_dict[mid][fname], fname)
+            popf_stat = PopfStat(fname=fname, rcnt_popf=rcnt_popf, wcnt_popf=wcnt_popf)
+            popf_stat_list.append(popf_stat)
+        stat_entry = StatEntry(obj_id=mentry.malloc_id, obj_rcnt=mentry.rcnt, 
+                                obj_wcnt=mentry.wcnt, obj_rwcnt=(mentry.rcnt+mentry.wcnt), popf_stat_list=popf_stat_list)
+        obj_stats.append(stat_entry)
+
+        i += 1
+    print("(Total RW to Objects) R: %d, W: %d" % (total_obj_rcnt, total_obj_wcnt))
+
+    ## RW to Objects 수로 Rank 정렬
+    #  일단 analyze_object()에서 출력되는 값들을 하나로 묶어놓고, 그중 하나의 값을 기준으로 정렬하여 출력하자.
+    sorted_obj_stats = sorted(obj_stats, key=lambda p: p.obj_rwcnt, reverse=True)
+    for j in range(100):
+        ent = sorted_obj_stats[j]
+        obj_r_rate = calculate_rate(ent.obj_rcnt, total_obj_rcnt)
+        obj_w_rate = calculate_rate(ent.obj_wcnt, total_obj_wcnt)
+        r_rate = calculate_rate(ent.obj_rcnt, total_rcnt)
+        w_rate = calculate_rate(ent.obj_wcnt, total_wcnt)
+        """
+        print("(obj %d/TotalObj) R: %d/%d (%.2f%%), W: %d/%d (%.2f%%)"
+                % (ent.obj_id, ent.obj_rcnt, total_obj_rcnt, obj_r_rate, ent.obj_wcnt, total_obj_wcnt, obj_w_rate))
+        print("(obj %d/TotalRW) R: %d/%d (%.2f%%), W: %d/%d (%.2f%%)"
+                % (ent.obj_id, ent.obj_rcnt, total_rcnt, r_rate, ent.obj_wcnt, total_wcnt, w_rate))
+        """
+        print("(obj %d/TotalObj/TotalRW) R: %d/%d/%d (%.2f%%/%.2f%%), W: %d/%d/%d (%.2f%%/%.2f%%)"
+                % (ent.obj_id, ent.obj_rcnt, total_obj_rcnt, total_rcnt, obj_r_rate, r_rate, 
+                                ent.obj_wcnt, total_obj_wcnt, total_wcnt, obj_w_rate, w_rate))
+        for popf_stat in ent.popf_stat_list:
+            popf_r_rate = calculate_rate(popf_stat.rcnt_popf, ent.obj_rcnt)
+            popf_w_rate = calculate_rate(popf_stat.wcnt_popf, ent.obj_wcnt)
+            print("\t(obj %d-func %s) R: %d/%d (%.2f%%), W: %d/%d (%.2f%%)"
+                    % (ent.obj_id, popf_stat.fname, popf_stat.rcnt_popf, ent.obj_rcnt, popf_r_rate,
+                    popf_stat.wcnt_popf, ent.obj_wcnt, popf_w_rate))
+
+    analyze_func(func_dict)
+
+def main():
+    # Open input trace file (.vout)
+    input_file_name = sys.argv[1]
+    input_file_linenum, raw_trace_file = open_input_file(input_file_name)
+
+    # Read input trace file
+    print("read_trace_file() start")
+    read_trace_file(input_file_linenum, raw_trace_file)
+    print("read_trace_file() end")
+    
+    # Close input trace file
+    raw_trace_file.close()
+
+    # Analyze per-object trace
+    print("analyze_object() start")
+    analyze_object()
+    print("analyze_object() end")
+
+
+    return
+
+if __name__ == "__main__":
+    main()
+
