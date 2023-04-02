@@ -7,7 +7,8 @@ echo 1 > /proc/sys/vm/compact_memory
 echo 3 > /proc/sys/vm/drop_caches
 echo 1 > /proc/sys/vm/compact_memory
 
-tooldir="$HOME/temp_bin/run"
+#tooldir="$HOME/temp_bin/run"
+tooldir="../../../valgrind_cachetrace"
 
 # command
 arguments=$@
