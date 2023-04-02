@@ -62,8 +62,7 @@ while True:
     line = file.readline()
     if not line: break
     if line[0] == "=" or line[0] == "-": continue
-    if line[0] != "[" : continue
-    if (i % (linenum//100)) == 0:
+    if (i % (linenum//1000)) == 0:
         print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="") 
     #if i>100: exit()
         
@@ -104,12 +103,12 @@ file.close()
 file = open(input_file_name, 'r')
 
 va_pool_size = max-min
-group_size = 4096 # Pagesize
-va_group_num = va_pool_size // group_size
+#group_size = 4096 # Pagesize
+#va_group_num = va_pool_size // group_size
 
-#group_num = 10000
-group_num = va_group_num
-#group_size = va_pool_size // group_num
+group_num = 10000
+#group_num = va_group_num
+group_size = va_pool_size // group_num
 print("group_size:", group_size, "group_num:", group_num)
 
 if scatter:
@@ -122,8 +121,7 @@ if scatter:
         line = file.readline()
         if not line: break
         if line[0] == "=" or line[0] == "-": continue
-        if line[0] != "[" : continue
-        if (i % (linenum//100)) == 0:
+        if (i % (linenum//1000)) == 0:
             print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="")         
 
         line = line.replace(']', '}').replace('[', '{').replace('}', ' ').replace('\n',' ')
@@ -152,8 +150,7 @@ if scatter:
 
     plt.rcParams["font.family"] = 'Times New Roman'
     plt.rcParams["font.size"] = 22
-    #plt.rcParams["figure.figsize"] = (8,5)
-    plt.rcParams["figure.figsize"] = (8,16)
+    plt.rcParams["figure.figsize"] = (8,5)
     plt.rc('legend', fontsize=18)
 
     fig, ax1 = plt.subplots(dpi=600)
@@ -192,8 +189,7 @@ else:
         line = file.readline()
         if not line: break
         if line[0] == "=" or line[0] == "-": continue
-        if line[0] != "[" : continue
-        if (i % (linenum//100)) == 0:
+        if (i % (linenum//1000)) == 0:
             print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="")         
 
         line = line.replace(']', '}').replace('[', '{').replace('}', ' ').replace('\n',' ')

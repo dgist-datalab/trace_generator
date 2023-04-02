@@ -4,14 +4,19 @@
 INPUT_FILE=""
 OPT_INT=0
 OPT_BOOL=False
+INPUT_FILE_YES=0
 
 # get options:
+echo "Note: '--input [args]' must be placed at the end"
 while (( "$#" )); do
     case "$1" in
         -i|--input)
             if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
-                INPUT_FILE=$2
+				#INPUT_FILE=$2
+				INPUT_FILE="${@:2}"
+				INPUT_FILE_YES=1
                 shift 2
+				break
             else
                 echo "Error: Argument for $1 is missing" >&2
                 exit 1
@@ -24,6 +29,12 @@ while (( "$#" )); do
             else
                 echo "Error: Argument for $1 is missing" >&2
                 exit 1
+            fi
+            ;;
+        -o|--outname)
+            if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+                OUT_NAME=$2
+                shift 2
             fi
             ;;
         -p|--pref)
@@ -56,6 +67,7 @@ while (( "$#" )); do
 done
 echo "===parsed command line option==="
 echo " - input: ${INPUT_FILE}"
+echo " - output name: ${OUT_NAME}"
 echo " - type: ${TRACE_TYPE}"
 echo " - pref: ${PREF}"
 echo " - nolog: ${NOLOG}"

@@ -37,10 +37,55 @@ def read_va_log(input_file_name, args, data_read = 0):
     va_log_file.close()
     return va_min, va_max, va_lower_bound, va_upper_bound, va_group_num, va_hist
 
+def save_pa_log(pa_min, pa_max, R_cnt, W_cnt, args, data=0):
+    if args.scatter > 0:
+        log_ext = ".pslog"
+    elif args.cdf:
+        log_ext = ".pclog"
+    else:
+        log_ext = ".pblog"
+    pa_log_file_name = input_file_name[:-5] + log_ext
+    pa_log_file = open(pa_log_file_name, 'w')
+    pa_log_file.write(str(hex(min)) + " " + str(hex(max)) + "\n")
+    pa_log_file.write(str(R_cnt) + " " + str(W_cnt) + "\n")
+    if data:
+        pa_log_file.write("ydata" + "\n")
+        pa_log_file.write(str(data).replace('[', '').replace(']', '').replace(',', ''))
+    pa_log_file.close()
+
+def skip_pa_cal(input_file_name, args):
+    # From PA log file, skip min, max, list
+    if args.skip:
+        if args.scatter > 0:
+            log_ext = ".pslog"
+        elif args.cdf:
+            log_ext = ".pclog"
+        else:
+            log_ext = ".pblog"
+        pa_log_file_name = input_file_name[:-5] + log_ext
+        pa_log_file = open(pa_log_file_name, 'r')
+        splitline = pa_log_file.readline().split(" ")
+        pa_min = int(splitline[0], 16)
+        pa_max = int(splitline[1], 16)
+        splitline = pa_log_file.readline().split(" ")
+        R_cnt = int(splitline[0], 16)
+        W_cnt = int(splitline[1], 16)
+        splitline = pa_log_file.readline()
+        pa_data = []
+        splitline = pa_log_file.readline().split(" ")
+        for y in splitline:
+            pa_data.append(int(y))
+        pa_log_file.close()
+        return pa_min, pa_max, R_cnt, W_cnt, pa_data
+    else:
+      return 0,0,0
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input", action='store', type=str, help='input file', default=False)
 parser.add_argument("-c", "--cdf", action='store_true', help='plot sorted cdf', default=False)
 parser.add_argument("-s", "--scatter", action='store', type=int, help='plot scattered graph', default=False)
+parser.add_argument("-p", "--skip", action='store_true', help='skip pa calculation', default=False)
+parser.add_argument("-r", "--range", action='store', type=str, help='plotting graph\'s group range (e.g., 1000,20000)', default=False)
 args = parser.parse_args()
 input_file_name = args.input
 scatter=0; cdf=0
@@ -53,6 +98,12 @@ else:
         print("plot sorted cdf graph")
     else:
         print("plot basic address histogram")
+
+if args.range:
+    group_range = args.range.split(",")
+    min_group_num = group_range[0]
+    max_group_num = group_range[1]
+
 
 input_file_name = args.input
 #input_file_name = sys.argv[1]
@@ -74,26 +125,30 @@ upper_bound = 0x1000000000
 lower_bound = 0x100000
 
 print("Find min/max of address..")
-file.readline()
-while True:
-    line = file.readline()
-    if not line: break
-    if line[0] == "=" or line[0] == "-": continue
-    if (i % (linenum//1000)) == 0:
-        print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="") 
-        
-    line = line.replace('R ', '').replace('W ', '').replace('\n',' ')
-    splitline = line.split(" ")
-    a = int(splitline[0], 16)    
-        
-    if a > max:
-        if a < upper_bound: # Upper bound of interesting address
-            max = a
-    if a < min:
-        if a > lower_bound: # Lower bound of interesting address
-            min = a
-         
-    i += 1
+if args.skip:
+    min, max, R_cnt, W_cnt, pa_data = skip_pa_cal(input_file_name, args)
+else:
+    file.readline()
+    while True:
+        line = file.readline()
+        if not line: break
+        if (line[0] != "R") and (line[0] != "W"): continue
+        if line[0] == "=" or line[0] == "-": continue
+        if (i % (linenum//100)) == 0:
+            print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="") 
+            
+        line = line.replace('R ', '').replace('W ', '').replace('\n',' ')
+        splitline = line.split(" ")
+        a = int(splitline[0], 16)    
+            
+        if a > max:
+            if a < upper_bound: # Upper bound of interesting address
+                max = a
+        if a < min:
+            if a > lower_bound: # Lower bound of interesting address
+                min = a
+             
+        i += 1
     
 print("min:", hex(min), "max:", hex(max))
 group_num = 100000
@@ -133,33 +188,43 @@ if scatter:
     W_cnt = 0
 
     print("Make scatter list..")
-    file.readline()
-    while True:
-        line = file.readline()
-        if not line: break
-        if line[0] == "=" or line[0] == "-": continue
-        if (i % (linenum//1000)) == 0:
-            print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="")         
+    if args.skip:
+        scatter = pa_data
+        print("Read scatter list in [.pslog]")
+    else:
+        file.readline()
+        while True:
+            line = file.readline()
+            if not line: break
+            if (line[0] != "R") and (line[0] != "W"): continue
+            if line[0] == "=" or line[0] == "-": continue
+            if (i % (linenum//100)) == 0:
+                print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="")         
 
-        # Integrate read/write as an access
-        if line[0] == 'R':
-            R_cnt += 1
-        elif line[0] == 'W':
-            W_cnt += 1
+            # Integrate read/write as an access
+            if line[0] == 'R':
+                R_cnt += 1
+            elif line[0] == 'W':
+                W_cnt += 1
 
-        line = line.replace('R ', '').replace('W ', '').replace('\n',' ')
-        a = int(splitline[0], 16)
-        if a >= upper_bound or a <= lower_bound:
+            line = line.replace('R ', '').replace('W ', '').replace('\n',' ')
+            splitline = line.split(" ")
+            a = int(splitline[0], 16)
+            if a >= upper_bound or a <= lower_bound:
+                i += 1
+                continue
+
+            group_idx = round((a-min)/scope*group_num)
+            scatter.append(group_idx)
             i += 1
-            continue
-
-        group_idx = round((a-min)/scope*group_num)
-        scatter.append(group_idx)
-        i += 1
     print("len(scatter):", len(scatter))  
     file.close()
 
-    print("R_cnt: %d, W_cnt: %d, Total: %d" % (R_cnt, W_cnt, R_cnt+W_cnt))
+    ### Save logs for fast next plotting
+    if not args.skip:
+        save_pa_log(min, max, R_cnt, W_cnt, args, data=scatter)
+        print("R_cnt: %d, W_cnt: %d, Total: %d" % (R_cnt, W_cnt, R_cnt+W_cnt))
+
     sum_scatter = sum(scatter)
     print("sum(scatter): %d" % (sum_scatter))
 
@@ -174,7 +239,11 @@ if scatter:
 
     x = list(np.arange(0, len(samp), 1))
 
-    figsize_x = 8; figsize_y = 5
+    #figsize_x = 8; figsize_y = 5
+    figsize_x = 8; figsize_y = 16
+#gsize_rate = group_size // va_group_size
+#print("VA group size: %d, PA group size: %d, PA/VA: %d" % (va_group_size, group_size, gsize_rate))
+#figsize_x = 8; figsize_y = 4*gsize_rate
     if precise_plot == 1:
         figsize_x = figsize_x * group_weight
     plt.rcParams["font.family"] = 'Times New Roman'
@@ -199,13 +268,21 @@ if scatter:
     ax1.set_xlabel(xlabel_name)
     ax1.set_ylabel(ylabel_name)
     ax1.tick_params(axis='y', direction='in')
-    if man == 0:
-        ax1.set_ylim(0, group_num)
+    if args.range:
+        ax1.set_ylim(int(min_group_num), int(max_group_num))
     else:
-        ax1.set_ylim(0, man_range) # add "man" in fig_name
+        if man == 0:
+            ax1.set_ylim(0, group_num)
+        else:
+            #ax1.set_ylim(0, man_range) # add "man" in fig_name
+            ax1.set_ylim(200000, group_num) # add "man" in fig_name
 
     print("plot end. save..")
-    id_str = "-scatter"+str(args.scatter)+"-g"+str(group_num)+"-"+str(group_size)
+    if args.range:
+        range_str = "-r"+min_group_num+"_"+max_group_num
+    else:
+        range_str = ""
+    id_str = "-scatter"+str(args.scatter)+range_str+"-g"+str(group_num)+"-"+str(group_size)
     if man == 0:
         fig_name = "./plot" + id_str + "_" + input_file_name[:-5] + "_pa.png"
     else:
@@ -220,33 +297,43 @@ else:
     W_cnt = 0
 
     print("Make histogram list..")
-    file.readline()
-    while True:
-        line = file.readline()
-        if not line: break
-        if line[0] == "=" or line[0] == "-": continue
-        if (i % (linenum//1000)) == 0:
-            print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="")         
+    if args.skip:
+        hist = pa_data
+        print("Read hist list in [.pslog]")
+    else:
+        file.readline()
+        while True:
+            line = file.readline()
+            if not line: break
+            if (line[0] != "R") and (line[0] != "W"): continue
+            if line[0] == "=" or line[0] == "-": continue
+            if (i % (linenum//100)) == 0:
+                print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="")         
 
-        # Integrate read/write as an access
-        if line[0] == 'R':
-            R_cnt += 1
-        elif line[0] == 'W':
-            W_cnt += 1
+            # Integrate read/write as an access
+            if line[0] == 'R':
+                R_cnt += 1
+            elif line[0] == 'W':
+                W_cnt += 1
 
-        line = line.replace('R ', '').replace('W ', '').replace('\n',' ')
-        a = int(line, 16)
-        if a >= upper_bound or a <= lower_bound:
+            line = line.replace('R ', '').replace('W ', '').replace('\n',' ')
+            splitline = line.split(" ")
+            a = int(splitline[0], 16)
+#a = int(line, 16)
+            if a >= upper_bound or a <= lower_bound:
+                i += 1
+                continue
+
+            percent = round((a-min)/scope*group_num)
+            hist[percent] += 1
+            
             i += 1
-            continue
-
-        percent = round((a-min)/scope*group_num)
-        hist[percent] += 1
-        
-        i += 1
         
     file.close()
-    print("R_cnt: %d, W_cnt: %d, Total: %d" % (R_cnt, W_cnt, R_cnt+W_cnt))
+    if not args.skip:
+        save_pa_log(min, max, R_cnt, W_cnt, args, data=hist)
+        print("R_cnt: %d, W_cnt: %d, Total: %d" % (R_cnt, W_cnt, R_cnt+W_cnt))
+
     sum_hist = sum(hist)
     print("sum(hist): %d" % (sum_hist))
     va_hotgroup_cnt = 0; va_hotgroup_sum = 0
@@ -312,11 +399,14 @@ else:
     print("plot..")
     ax1.bar(x_, hist_, width=0.2, edgecolor='black', linewidth=1, zorder=1)
 
-    if man == 1:
-        if cdf == 1:
-            ax1.set_xlim(man_range-10000, man_range) # add "man" in fig_name
-        else:
-            ax1.set_xlim(0, man_range) # add "man" in fig_name
+    if args.range:
+        ax1.set_xlim(min_group_num, max_group_num)
+    else:
+        if man == 1:
+            if cdf == 1:
+                ax1.set_xlim(man_range-10000, man_range) # add "man" in fig_name
+            else:
+                ax1.set_xlim(0, man_range) # add "man" in fig_name
 
     if sorted == 1:
         xlabel_name="Physical address groups (" + str(group_num) + " groups, "+str(group_size)+"B, sorted)"
@@ -324,12 +414,16 @@ else:
         xlabel_name="Physical address groups (" + str(group_num) + " groups, "+str(group_size)+"B)"
     ax1.set_xlabel(xlabel_name)
     #ax1.set_xlabel('Physical address groups (1,000,000 groups)')
+    if args.range:
+        range_str = "-r"+min_group_num+"_"+max_group_num
+    else:
+        range_str = ""
     if cdf == 1:
         ax1.set_ylabel('CDF (# of accesses)')
-        id_str = "-cdf-g"+str(group_num)+"-"+str(group_size)
+        id_str = "-cdf"+range_str+"-g"+str(group_num)+"-"+str(group_size)
     else:
         ax1.set_ylabel('# of accesses')
-        id_str = "-g"+str(group_num)+"-"+str(group_size)
+        id_str = range_str+"-g"+str(group_num)+"-"+str(group_size)
     ax1.tick_params(axis='y', direction='in')
 
     print("plot end. save..")
