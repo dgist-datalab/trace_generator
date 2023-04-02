@@ -146,19 +146,21 @@ class RWEntry:
         self.func_id = func_id
         
 class MemEntry:
-    def __init__(self, malloc_id, msize, maddr, line_group, rcnt, wcnt, free_id=-1):
+    def __init__(self, malloc_id, msize, maddr, mtime, line_group, rcnt, wcnt, free_id=-1):
         self.malloc_id = malloc_id
         self.msize = msize
         self.maddr = maddr
+        self.mtime = mtime
         self.line_group = line_group
         self.rcnt = rcnt
         self.wcnt = wcnt
         self.free_id = free_id
 
 class FreeEntry:
-    def __init__(self, free_id, faddr, malloc_id=-1):
+    def __init__(self, free_id, faddr, ftime, malloc_id=-1):
         self.free_id = free_id
         self.faddr = faddr
+        self.ftime = ftime
         self.malloc_id = malloc_id
     
 
@@ -322,7 +324,7 @@ def open_output_file(input_file_name):
 
     return output_file
 
-def check_line_type(line):
+def check_line_type_(line):
     if line[0] == "^":
         if line[1] == "f": 
             if line[3] == "b": # function call (begin)
@@ -344,6 +346,25 @@ def check_line_type(line):
         line_type = LINE_RW
     return line_type
 
+# Define lookup table for line types
+LINE_TYPES = {
+    "^f b": LINE_FUNC_BEGIN,
+    "^f e": LINE_FUNC_END,
+    "^m b": LINE_MALLOC_CALL,
+    "^m e": LINE_FREE_CALL,
+}
+
+# Define function to check line type
+def check_line_type(line):
+    if line[0] == "[":
+        return LINE_RW
+    prefix = line[:4]
+    if prefix in LINE_TYPES:
+        return LINE_TYPES[prefix]
+    else:
+        return LINE_IGNORE
+
+
 # 지금 func_dict는 func_id로 구분하지 않고, 개별 instance의 begin-end 사이에 해당하는 것만 구분하고 있다.
 def interprete_line(line_type, line):
     global func_dict, opened_funcs, malloc_dict, opened_mallocs, malloc_id, func_id, free_id
@@ -361,14 +382,16 @@ def interprete_line(line_type, line):
         splitline = line.replace("\n", "").split(" ")
         maddr = int(splitline[3], 16)
         msize = int(splitline[2], 10)
-        malloc_entry = MemEntry(malloc_id, msize, maddr, [], 0, 0)
+        mtime = float(splitline[4])
+        malloc_entry = MemEntry(malloc_id, msize, maddr, mtime, [], 0, 0)
         m_list.append(malloc_entry)
         malloc_id += 1
 
     elif line_type == LINE_FREE_CALL:
         splitline = line.replace("\n", "").split(" ")
         faddr = int(splitline[2], 16)
-        free_entry = FreeEntry(free_id, faddr)
+        ftime = float(splitline[3])
+        free_entry = FreeEntry(free_id, faddr, ftime)
         f_list.append(free_entry)
         free_id += 1
 
@@ -395,12 +418,16 @@ def compare_mallocfree():
     ptr2 = 0
     delcnt = 0
 
+    sum_lifetime = 0
     while ptr1 < len(sort_mlist) and ptr2 < len(sort_flist):
         if sort_mlist[ptr1].maddr == sort_flist[ptr2].faddr:
             #print(f"{sort_mlist[ptr1]} is in both lists.")
             common_list.append(sort_mlist[ptr1])
             sort_mlist[ptr1].free_id = sort_flist[ptr2].free_id
             sort_flist[ptr2].malloc_id = sort_mlist[ptr1].malloc_id
+            obj_lifetime = sort_flist[ptr2].ftime - sort_mlist[ptr1].mtime
+            print("obj_lifetime: %f" % (obj_lifetime))
+            sum_lifetime += obj_lifetime
 
             del disjoint_mlist[ptr1 - delcnt]
             del disjoint_flist[ptr2 - delcnt]
@@ -410,6 +437,11 @@ def compare_mallocfree():
             ptr1 += 1
         else:
             ptr2 += 1
+    sort_mlist = sorted(sort_mlist, key=lambda x: x.malloc_id)
+    sort_flist = sorted(sort_flist, key=lambda x: x.free_id)
+
+    avg_lifetime = sum_lifetime / len(common_list)
+    print("avg lifetime of obj: %f" % (avg_lifetime))
 
     print(f"num of mlist: {len(sort_mlist)}, num of flist: {len(sort_flist)}")
     print(f"num of dj_mlist: {len(disjoint_mlist)}, num of dj_flist: {len(disjoint_flist)}")
@@ -454,9 +486,15 @@ def compare_mallocfree():
     return
 
 def read_trace_file(linenum, raw_trace_file):
+    print("Read trace file to memory!")
+    raw_trace = raw_trace_file.read()
+    lines = raw_trace.split("\n")
+    print("Trace loading ends")
+
     i=0
-    while True:
-        line = raw_trace_file.readline()
+    #while True:
+    for line in lines:
+        #line = raw_trace_file.readline()
         if not line: break
         if (i % (linenum//100)) == 0:
             print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="") 
@@ -585,7 +623,7 @@ def main():
     # Open input trace file (.vout)
     input_file_name = sys.argv[1]
     input_file_linenum, raw_trace_file = open_input_file(input_file_name)
-    open_output_file(input_file_name)
+    #open_output_file(input_file_name)
 
     # Read input trace file
     print("read_trace_file() start")
@@ -607,7 +645,7 @@ def main():
 
     # Close input/output file
     raw_trace_file.close()
-    output_file.close()
+    #output_file.close()
     return
 
 if __name__ == "__main__":

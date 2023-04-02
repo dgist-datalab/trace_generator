@@ -6,6 +6,7 @@ from collections import namedtuple
 import bisect
 from bisect import insort, bisect_left
 from itertools import islice
+import math
 
 class SortedDict:
     def __init__(self, *args, **kwargs):
@@ -59,6 +60,7 @@ class SortedDict:
         if not self.keys:
             return None
         index = bisect_left(self.keys, x)
+        #print("index:", index)
         if index == 0:
             return self.keys[0]
         if index == len(self.keys):
@@ -108,9 +110,17 @@ total_obj_rcnt = 0 # # of total read to objects
 total_obj_wcnt = 0 # # of total write to objects
 obj_stats = []
 output_file = ""
+min_maddr = 0xffffffffffffffff
+max_maddr = 0
+max_maddr_real = 0
 
 #class StatPopf:
     #def __init__(r_rate, w_rate, 
+
+def print_numdict():
+    global malloc_dict, func_dict, opened_funcs, opened_mallocs, popf_dict
+    print("(num) malloc_dict: %d, func_dict: %d, opened_funcs: %d, opened_mallocs: %d, popf_dict: %d" % 
+            (len(malloc_dict), len(func_dict), len(opened_funcs), len(opened_mallocs), len(popf_dict)))
 
 def file_len(fname):
     with open(fname) as f:
@@ -327,6 +337,7 @@ def check_line_type(line):
 def interprete_line(line_type, line):
     global func_dict, opened_funcs, malloc_dict, opened_mallocs, malloc_id, func_id
     global total_rcnt, total_wcnt, total_obj_rcnt, total_obj_wcnt
+    global min_maddr, max_maddr, max_maddr_real
     global output_file
 
     if line_type == LINE_FUNC_BEGIN:
@@ -360,6 +371,9 @@ def interprete_line(line_type, line):
         malloc_entry = MemEntry(malloc_id, msize, maddr, [], 0, 0)
         malloc_dict[malloc_id] = malloc_entry
         opened_mallocs[maddr] = malloc_entry
+        min_maddr = min(min_maddr, maddr)
+        max_maddr = max(max_maddr, maddr)
+        max_maddr_real = max(max_maddr_real, maddr + msize - 1)
         malloc_id += 1
 
     elif line_type == LINE_FREE_CALL:
@@ -380,12 +394,13 @@ def interprete_line(line_type, line):
     elif line_type == LINE_RW:
         # 처음 trace의 RW line을 읽는 곳이니 여기서 Access로 만들어 보관해놓으면 될 것 같다.
         # 오래걸리는 원인
+        # nocache trace를 읽을 땐 여기도 통과 못하고 메모리 부족해짐
 
         sline = line.replace('[', '').replace(']', '').replace('\n', '').split(" ")
         rw_type = sline[0]
         rw_addr = int(sline[1], 16)
-        rw_time = float(sline[2])
-        #rw_time = 0
+        #rw_time = float(sline[2])
+        rw_time = 0
         rw_entry = RWEntry(rw_type=rw_type, rw_addr=rw_addr, rw_timestamp=rw_time) 
         if rw_type == "R":
             total_rcnt += 1
@@ -416,6 +431,8 @@ def interprete_line(line_type, line):
         #for maddr, mentry in opened_mallocs.items():
         t_maddr = opened_mallocs.find_closest_key_less_than(rw_addr)
         if t_maddr != None:
+            #print(list(map(hex, opened_mallocs.keys)))
+            #print("rw_adrr: %x, t_maddr: %x" % (rw_addr, t_maddr))
             maddr = t_maddr; mentry = opened_mallocs[maddr]
             if (maddr <= rw_addr) and (rw_addr < maddr+mentry.msize):
                 # True: This RW is RW to Object
@@ -476,6 +493,7 @@ def read_trace_file(linenum, raw_trace_file):
         if not line: break
         if (i % (linenum//100)) == 0:
             print('\r', "%.0f%% [%d/%d]" % (i/linenum*100, i, linenum), end="") 
+            print_numdict()
         """
         if (i // (linenum//100) >= 5):
             print("read 5%. read stopped.")
@@ -498,21 +516,40 @@ def read_trace_file(linenum, raw_trace_file):
 
     return
 
+def check_rwaddr_in_maddr_minmax(linenum, raw_trace_file):
+    raw_trace_file.seek(0)
+    rwaddr_in_maddr_minmax = 0
+    while True:
+        line = raw_trace_file.readline()
+        if not line: break
+        line_type = check_line_type(line)
+        if line_type == LINE_RW:
+            sline = line.replace('[', '').replace(']', '').replace('\n', '').split(" ")
+            rw_type = sline[0]
+            rw_addr = int(sline[1], 16)
+            if (min_maddr <= rw_addr) and (rw_addr <= max_maddr_real):
+                rwaddr_in_maddr_minmax += 1
+
+    print("rwaddr_in_maddr_minmax: %d / Total RW cnt: %d\n" % (rwaddr_in_maddr_minmax, total_rcnt + total_wcnt))
+    return
+
 def analyze_object():
     global malloc_dict
     global popf_dict
     global output_file
+    global max_maddr, max_maddr_real
 
     PopfStat = namedtuple('PopfStat', ['fname', 'rcnt_popf', 'wcnt_popf'])
-    StatEntry = namedtuple('StatEntry', ['obj_id', 'obj_rcnt', 'obj_wcnt', 'obj_rwcnt', 'popf_stat_list'])
+    StatEntry = namedtuple('StatEntry', ['obj_id', 'obj_rcnt', 'obj_wcnt', 'obj_rwcnt', 'popf_stat_list', 'start_addr', 'end_addr'])
     num_objs = len(malloc_dict)
     msg = "num_objs: " + str(num_objs)
     print(msg)
     output_file.write(msg + "\n")
     i = 0
     for mid, mentry in malloc_dict.items():
-        if (i % (num_objs//100)) == 0: 
+        if (i % (math.ceil(num_objs/100))) == 0: 
             print('\r', "%.0f%% [%d/%d]" % (i/num_objs*100, i, num_objs), end='')
+            print_numdict()
         popf_dict[mid] = {}
         rcnt_obj=0; wcnt_obj=0;
 
@@ -561,18 +598,18 @@ def analyze_object():
             popf_stat = PopfStat(fname=fname, rcnt_popf=rcnt_popf, wcnt_popf=wcnt_popf)
             popf_stat_list.append(popf_stat)
         stat_entry = StatEntry(obj_id=mentry.malloc_id, obj_rcnt=mentry.rcnt, 
-                                obj_wcnt=mentry.wcnt, obj_rwcnt=(mentry.rcnt+mentry.wcnt), popf_stat_list=popf_stat_list)
+                                obj_wcnt=mentry.wcnt, obj_rwcnt=(mentry.rcnt+mentry.wcnt), popf_stat_list=popf_stat_list, start_addr=mentry.maddr, end_addr=mentry.maddr+mentry.msize-1)
         obj_stats.append(stat_entry)
 
         i += 1
-    msg = "(Total RW to Objects) R: {}, W: {}\n".format(total_obj_rcnt, total_obj_wcnt)
+    msg = "(Total RW to Objects) R: {}, W: {}  |  min_maddr: {:x}, max_maddr: {:x} (~{:x})\n".format(total_obj_rcnt, total_obj_wcnt, min_maddr, max_maddr, max_maddr_real)
     print(msg, end="")
     output_file.write(msg)
 
     ## RW to Objects 수로 Rank 정렬
     #  일단 analyze_object()에서 출력되는 값들을 하나로 묶어놓고, 그중 하나의 값을 기준으로 정렬하여 출력하자.
     sorted_obj_stats = sorted(obj_stats, key=lambda p: p.obj_rwcnt, reverse=True)
-    for j in range(100):
+    for j in range(min(100, len(sorted_obj_stats))):
         ent = sorted_obj_stats[j]
         obj_r_rate = calculate_rate(ent.obj_rcnt, total_obj_rcnt)
         obj_w_rate = calculate_rate(ent.obj_wcnt, total_obj_wcnt)
@@ -584,9 +621,9 @@ def analyze_object():
         print("(obj %d/TotalRW) R: %d/%d (%.2f%%), W: %d/%d (%.2f%%)"
                 % (ent.obj_id, ent.obj_rcnt, total_rcnt, r_rate, ent.obj_wcnt, total_wcnt, w_rate))
         """
-        msg="(obj {0}/TotalObj/TotalRW) R: {1}/{2}/{3} ({4:.2f}%/{5:.2f}%), W: {6}/{7}/{8} ({9:.2f}%/{10:.2f}%)\n".format(
+        msg="(obj {0}/TotalObj/TotalRW) R: {1}/{2}/{3} ({4:.2f}%/{5:.2f}%), W: {6}/{7}/{8} ({9:.2f}%/{10:.2f}%) | {11:8x}-{12:8x}\n".format(
                 ent.obj_id, ent.obj_rcnt, total_obj_rcnt, total_rcnt, obj_r_rate, r_rate, 
-                ent.obj_wcnt, total_obj_wcnt, total_wcnt, obj_w_rate, w_rate)
+                ent.obj_wcnt, total_obj_wcnt, total_wcnt, obj_w_rate, w_rate, ent.start_addr, ent.end_addr)
         output_file.write(msg)
         """
         print("(obj %d/TotalObj/TotalRW) R: %d/%d/%d (%.2f%%/%.2f%%), W: %d/%d/%d (%.2f%%/%.2f%%)"
@@ -620,16 +657,13 @@ def main():
     print("read_trace_file() start")
     read_trace_file(input_file_linenum, raw_trace_file)
     print("read_trace_file() end")
-    
-    # Close input trace file
-    raw_trace_file.close()
 
     # Analyze per-object trace
     print("analyze_object() start")
     analyze_object()
     print("analyze_object() end")
 
-
+    check_rwaddr_in_maddr_minmax(input_file_linenum, raw_trace_file)
     # Close input/output file
     raw_trace_file.close()
     output_file.close()

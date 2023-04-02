@@ -198,7 +198,8 @@ void _bench(uint64_t memsize, int rwunit) {
 }
 
 void bench(void) {
-	uint64_t memsize = 1UL*M;
+	//uint64_t memsize = 1UL*M;
+	uint64_t memsize = 512UL*M;
 	int rwunit = 4096;
 
 	/* Each _bench() calls one malloc() */
