@@ -86,8 +86,10 @@ fi
 
 while true; do
     if [ -d "/proc/$target_pid/" ]; then
-		pidlist=$(ps -AL | grep callgrind | awk '{print $2}' | paste -s -d, -) # consider time lags of TIDs generation
-		echo $pidlist > /sys/module/memory/parameters/target_pids
+		if [ "$TRACE_TYPE" == "physical" ]; then
+			pidlist=$(ps -AL | grep callgrind | awk '{print $2}' | paste -s -d, -) # consider time lags of TIDs generation
+			echo $pidlist > /sys/module/memory/parameters/target_pids
+		fi
 
         cp /proc/$target_pid/maps maps_temp
         maps_numline=$(wc -l maps_temp | awk '{print $1}')
@@ -109,7 +111,9 @@ echo "runtime: $runtime (sec)"
 
 cat /proc/vpmap/vpmap > ./$logfile.vpmap
 #echo 0 > /sys/module/memory/parameters/target_pid
-echo 0 > /sys/module/memory/parameters/target_pids
+if [ "$TRACE_TYPE" == "physical" ]; then
+	echo 0 > /sys/module/memory/parameters/target_pids
+fi
 
 echo "Process end"
 
