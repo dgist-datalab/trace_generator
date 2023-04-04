@@ -152,5 +152,5 @@ elif [ $GRAPH_OPT -eq 1 ]; then
 		fi
 	fi
 elif [ $GRAPH_OPT -eq 0 ]; then
-	echo "no plot... run_script.sh end"
+	echo "no plot selected. run_script.sh end"
 fi
