@@ -31,6 +31,12 @@ while (( "$#" )); do
                 exit 1
             fi
             ;;
+        -o|--outname)
+            if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+                OUT_NAME=$2
+                shift 2
+            fi
+            ;;
         -p|--pref)
             PREF=True
             shift
