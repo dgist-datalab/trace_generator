@@ -48,19 +48,10 @@ while [[ ! "$response" =~ ^([vVpP])$ ]]; do
 done
 echo "selected trace type: $trace_type"
 
-read -r -p "Enable Valgrind's cpu cache prefetcher option? [y/N] " response
-if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-	pref_type="--pref"
-	echo "prefetcher option: ON"
-else
-	pref_type=""
-	echo "prefetcher option: OFF"
-fi
-
 tname="$opt"
 tpath="${synth_dir}/$tname"
 
-cmd="${run_script} --type $trace_type $pref_type --outname $tname --input $tpath"
+cmd="${run_script} --type $trace_type --pref --outname $tname --input $tpath"
 
 echo "\$$cmd"
-#$cmd
+$cmd
