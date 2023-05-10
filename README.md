@@ -4,7 +4,7 @@ This repository is focused on working together as a part of the [CXL-flash Desig
 
 ## Goal
 The goal of this memory tracing tool is generating raw memory trace files ([.vout] or [.pout]). 
-To use MQSim_CXL in [CXL-flash Design Tools](https://github.com/spypaul/MQSim_CXL), the trace files generated from this tool should be translated to [.trace] files by using [Trace Translator](https://github.com/spypaul/trace_translation).
+To use MQSim_CXL in [CXL-flash Design Tools](https://github.com/spypaul/MQSim_CXL), the raw trace files generated from this tool should be translated to [.trace] files by using [Trace Translator](https://github.com/spypaul/trace_translation).
 
 ## Installation
 This memory tracing tool is composed of three main components: a modified version of Valgrind, the Linux kernel, and scripts to facilitate its use. 
@@ -53,3 +53,8 @@ python3 ./after_run/graph/cg_pa_histogram.py --input [.pout] --scatter 103
 ```
 
 * If you want to generate trace files of your target applications, run run_script/run_script.sh with your target applications following [README](https://github.com/dgist-datalab/trace_generator/tree/main/run_script).
+
+### Test Output
+* Raw trace files: [.vout], [.pout]
+* These raw trace files are the input files for [Trace Translator](https://github.com/spypaul/trace_translation).
+* [Trace Translator](https://github.com/spypaul/trace_translation) translates these raw trace files to trace files for [MQSim_CXL](https://github.com/spypaul/MQSim_CXL).
