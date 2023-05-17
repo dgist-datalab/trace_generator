@@ -82,7 +82,7 @@ valgrind --tool=callgrind --simulate-wb=yes --simulate-hwpref=${pref} --log-fd=2
 target_pid=$!
 pname=$(tr '\0' ' ' </proc/$target_pid/cmdline)
 echo "process pid: $target_pid (name: $pname)"
-if [[ $pname != *callgrind* || $pname != *"$execname"* ]]; then
+if [[ $pname != *"$execname"* ]]; then
 	echo "Error: Can't find the pid of target process"
 	exit
 fi
