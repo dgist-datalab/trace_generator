@@ -30,9 +30,15 @@ elif [ "$TRACE_TYPE" == "physical" ]; then
     echo "Trace type: Physical address"
     echo "You can get both trace files of Virtual address and V2P mapping. It requires modified kernel."
 	echo 0 > /proc/vpmap/vpmap
-	old_cg=$(pgrep callgrind)
+	old_cg=$(pgrep -f callgrind | tail -n1)
 	if [ -n "$old_cg" ]; then
-		echo "[CAUTION] In the current version, only one process can be traced in the Physical Trace mode. Stop running.."
+		echo "[CAUTION] In the current version, only one process can be traced in the Physical Trace mode."
+		echo "You should kill your old PIDs to run this script. The following PID list is assumed to be your old target processes:"
+		old_cg_list=$(pgrep -f callgrind)
+		echo "========="
+		echo "$old_cg_list"
+		echo "========="
+		echo "Stop running.."
 		exit
 	fi
 fi
@@ -72,8 +78,15 @@ start_time=`date +%s`
 echo "Run $execname with valgrind.."
 valgrind --tool=callgrind --simulate-wb=yes --simulate-hwpref=${pref} --log-fd=2 $execname > $proclog 2> $cglog &
 
-target_pid=$(ps | grep callgrind | tail -n1 | awk '{print $1}')
-echo "process pid: $target_pid"
+#target_pid=$(ps | grep callgrind | tail -n1 | awk '{print $1}')
+target_pid=$!
+pname=$(tr '\0' ' ' </proc/$target_pid/cmdline)
+echo "process pid: $target_pid (name: $pname)"
+if [[ $pname != *callgrind* || $pname != *"$execname"* ]]; then
+	echo "Error: Can't find the pid of target process"
+	exit
+fi
+
 if [ "$TRACE_TYPE" == "physical" ]; then
     echo $target_pid > /sys/module/memory/parameters/target_pid
     cat /sys/module/memory/parameters/target_pid
