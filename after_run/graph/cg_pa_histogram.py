@@ -178,7 +178,7 @@ if scatter:
     figsize_x = 8; figsize_y = 5
     if precise_plot == 1:
         figsize_x = figsize_x * group_weight
-    plt.rcParams["font.family"] = 'Times New Roman'
+    #plt.rcParams["font.family"] = 'Times New Roman'
     plt.rcParams["font.size"] = 22
     plt.rcParams["figure.figsize"] = (figsize_x, figsize_y)
     plt.rc('legend', fontsize=18)
@@ -295,7 +295,7 @@ else:
     figsize_x = 8; figsize_y = 5
     if precise_plot == 1:
         figsize_x = figsize_x * group_weight
-    plt.rcParams["font.family"] = 'Times New Roman'
+    #plt.rcParams["font.family"] = 'Times New Roman'
     plt.rcParams["font.size"] = 22
     plt.rcParams["figure.figsize"] = (figsize_x, figsize_y)
     plt.rc('legend', fontsize=18)

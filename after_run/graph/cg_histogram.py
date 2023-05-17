@@ -1,5 +1,4 @@
 from tokenize import group
-from turtle import up
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
@@ -148,7 +147,7 @@ if scatter:
 
     x = list(np.arange(0, len(samp), 1))
 
-    plt.rcParams["font.family"] = 'Times New Roman'
+    #plt.rcParams["font.family"] = 'Times New Roman'
     plt.rcParams["font.size"] = 22
     plt.rcParams["figure.figsize"] = (8,5)
     plt.rc('legend', fontsize=18)
@@ -234,7 +233,7 @@ else:
     # Make histogram
     x = list(np.arange(0, group_num+1, 1)) 
 
-    plt.rcParams["font.family"] = 'Times New Roman'
+    #plt.rcParams["font.family"] = 'Times New Roman'
     plt.rcParams["font.size"] = 22
     plt.rcParams["figure.figsize"] = (8,5)
     plt.rc('legend', fontsize=18)
