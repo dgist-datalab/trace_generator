@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root or with sudo privileges"
+  exit
+fi
+
 # drop page caches
 sync
 echo 3 > /proc/sys/vm/drop_caches
@@ -73,19 +78,6 @@ if [ "$TRACE_TYPE" == "physical" ]; then
     echo $target_pid > /sys/module/memory/parameters/target_pid
     cat /sys/module/memory/parameters/target_pid
 fi
-
-while true; do
-    if [ -d "/proc/$target_pid/" ]; then
-        cp /proc/$target_pid/maps maps_temp
-        maps_numline=$(wc -l maps_temp | awk '{print $1}')
-        if [ $maps_numline -ne 0 ]; then
-            mv maps_temp $logfile.maps
-        fi
-        sleep 0.3
-    else
-        break
-    fi
-done
 
 wait $target_pid
 end_time=`date +%s`

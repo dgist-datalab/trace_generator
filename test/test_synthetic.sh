@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root or with sudo privileges"
+  exit
+fi
+
 tool_dir=$(git rev-parse --show-toplevel)
 run_script="${tool_dir}/run_script/run_script.sh"
 synth_dir="${tool_dir}/test/Synthetic_Workload"
