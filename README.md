@@ -44,7 +44,7 @@ $ reboot
 * When you run `test_synthetic.sh`, you can select which synthetic workload to run and generate only a virtual memory trace or both virtual/physical traces.
 ```
 $ cd test/
-$ ./test_synthetic.sh
+$ sudo ./test_synthetic.sh
 ```
 * After generating the trace file, you can plot a rough figure showing the memory address distribution of the trace file.
 ```
