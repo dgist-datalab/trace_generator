@@ -7,7 +7,7 @@ The goal of this memory tracing tool is generating raw memory trace files (`*.vo
 To use MQSim_CXL in [CXL-flash Design Tools](https://github.com/spypaul/MQSim_CXL), the raw trace files generated from this tool should be translated to `*.trace` files by using [Trace Translator](https://github.com/spypaul/trace_translation).
 
 ## Installation
-This memory tracing tool is composed of three main components: a modified version of Valgrind, the Linux kernel, and scripts to facilitate its use.  
+This memory tracing tool is composed of three main components: a modified version of Valgrind, the Linux kernel, and scripts to facilitate its use.
 Repositories of the modified version of Valgrind and Linux kernel are submodules of this repository, and they follow their own licenses, GPL v2.
 
 ### The modified version of Valgrind
