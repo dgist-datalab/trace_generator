@@ -81,6 +81,8 @@ valgrind --tool=callgrind --simulate-wb=yes --simulate-hwpref=${pref} --log-fd=2
 #target_pid=$(ps | grep callgrind | tail -n1 | awk '{print $1}')
 target_pid=$!
 pname=$(tr '\0' ' ' </proc/$target_pid/cmdline)
+pidlist=$(ps -AL | grep callgrind | awk '{print $2}' | paste -s -d, -)
+
 echo "process pid: $target_pid (name: $pname)"
 if [[ $pname != *"$execname"* ]]; then
 	echo "Error: Can't find the pid of target process"
@@ -88,9 +90,22 @@ if [[ $pname != *"$execname"* ]]; then
 fi
 
 if [ "$TRACE_TYPE" == "physical" ]; then
-    echo $target_pid > /sys/module/memory/parameters/target_pid
+    #echo $target_pid > /sys/module/memory/parameters/target_pid
+    echo $pidlist > /sys/module/memory/parameters/target_pid
     cat /sys/module/memory/parameters/target_pid
 fi
+
+while true; do
+    if [ -d "/proc/$target_pid/" ]; then
+        if [ "$TRACE_TYPE" == "physical" ]; then
+            pidlist=$(ps -AL | grep callgrind | awk '{print $2}' | paste -s -d, -) # consider time lags of TIDs generation
+            echo $pidlist > /sys/module/memory/parameters/target_pid
+        fi
+        sleep 0.3
+    else
+        break
+    fi
+done
 
 wait $target_pid
 end_time=`date +%s`
