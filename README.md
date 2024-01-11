@@ -26,6 +26,7 @@ $ sudo make install
 
 ### Linux Kernel
 * If you don't need physical traces, don't need to install this Linux kernel.
+* The `defconfig` used in our forked kernel is located at `arch/x86/configs/ubuntu_defconfig`.
 1. Clone [the github repository](https://github.com/dgist-datalab/cxl-kernel/tree/220990494efb831170a0dd60b45bd8afeea2d023)
 ```
 $ git clone https://github.com/dgist-datalab/cxl-kernel.git
@@ -33,6 +34,7 @@ $ cd cxl-kernel
 ```
 2. Build & install the Linux kernel
 ```
+$ cp arch/x86/configs/ubuntu_defconfig .config
 $ make bindeb-pkg -j64
 $ cd ../
 $ dpkg -i linux-headers-5.17.4-... linux-image-5.17.4-... 
